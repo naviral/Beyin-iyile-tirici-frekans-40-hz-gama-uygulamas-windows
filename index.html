@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>40 Hz Gama Beyin Dalgası Jeneratörü (Odaklanma & Hafıza)</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --accent: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.35);
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --green: #238636;
+            --purple: #a371f7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+        }
+
+        .container {
+            max-width: 720px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 26px;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: rgba(163, 113, 247, 0.2);
+            color: var(--purple);
+            font-size: 13px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--purple);
+        }
+
+        p.desc {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Canvas Visualizer */
+        .visualizer-container {
+            background: #090d13;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 130px;
+            display: block;
+        }
+
+        .freq-display {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--accent);
+            background: rgba(13, 17, 23, 0.85);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        /* Controls Grid */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-card {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .control-card h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+        }
+
+        select {
+            background: #161b22;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 13px;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: #21262d;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            margin: 8px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--accent-glow);
+        }
+
+        /* Master Action Button */
+        .action-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .play-btn {
+            background: var(--green);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(35, 134, 54, 0.4);
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .play-btn.playing {
+            background: #da3633;
+            box-shadow: 0 4px 15px rgba(218, 54, 51, 0.4);
+        }
+
+        .timer-info {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .info-box {
+            margin-top: 24px;
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 12px;
+            color: #8b949e;
+            line-height: 1.5;
+        }
+
+        .info-box b {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>⚡ 40 Hz Gama Beyin Dalgası <span class="badge">Saf Bilimsel Ton</span></h1>
+            <p class="desc">MIT nörolojik araştırmalarında odaklanma, hafıza konsolidasyonu ve zihinsel berraklık için kullanılan saf 40 Hz gama frekansı.</p>
+        </header>
+
+        <div class="visualizer-container">
+            <canvas id="visualizer"></canvas>
+            <div class="freq-display" id="freqLabel">Hedef: 40.0 Hz Gama</div>
+        </div>
+
+        <div class="controls-grid">
+            <!-- 1. Dalga Türü & Taşıyıcı -->
+            <div class="control-card">
+                <h3>🎛️ Mod & Akort</h3>
+                <label for="modeSelect">Uygulama Yöntemi:</label>
+                <select id="modeSelect">
+                    <option value="binaural">Çift Kulaklık (Binaural Beats - Önerilen)</option>
+                    <option value="isochronic">İzokronik Darbeli Ton (Hoparlör Uyumlu)</option>
+                    <option value="pure">Saf 40 Hz Sub-Bass</option>
+                </select>
+
+                <div style="margin-top: 14px;">
+                    <label for="carrierSelect">Taşıyıcı Ses (Temel Frekans):</label>
+                    <select id="carrierSelect">
+                        <option value="200">200 Hz (Derin & Sakinleştirici)</option>
+                        <option value="432">432 Hz (Verdi Doğal Akordu)</option>
+                        <option value="440">440 Hz (Standart La Notası)</option>
+                        <option value="528">528 Hz (Dönüşüm / Berraklık)</option>
+                        <option value="128">128 Hz (Cevher Tonu C3)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. Arka Plan Sesi -->
+            <div class="control-card">
+                <h3>🌧️ Arka Plan Ambiyansı</h3>
+                <label for="ambienceSelect">Odaklanma Gürültüsü:</label>
+                <select id="ambienceSelect">
+                    <option value="none">Sadece Saf 40 Hz</option>
+                    <option value="pink">Pembe Gürültü (Pink Noise - Nöral Denge)</option>
+                    <option value="brown">Kahverengi Gürültü (Brown Noise - Derin Su)</option>
+                    <option value="rain">Yumuşak Yağmur Sesi</option>
+                </select>
+
+                <div style="margin-top: 14px;">
+                    <label>Ambiyans Ses Seviyesi: <span id="ambVolLabel">40%</span></label>
+                    <input type="range" id="ambVol" min="0" max="1" step="0.05" value="0.4">
+                </div>
+            </div>
+
+            <!-- 3. Gama Seviyesi -->
+            <div class="control-card">
+                <h3>🔊 40 Hz Gama Şiddeti</h3>
+                <label>Gama Ton Seviyesi: <span id="gamaVolLabel">60%</span></label>
+                <input type="range" id="gamaVol" min="0" max="1" step="0.05" value="0.6">
+            </div>
+
+            <!-- 4. Zamanlayıcı -->
+            <div class="control-card">
+                <h3>⏱️ Çalışma Zamanlayıcısı</h3>
+                <label for="timerSelect">Otomatik Kapanma Süresi:</label>
+                <select id="timerSelect">
+                    <option value="0">Sınırsız (Manuel Kapat)</option>
+                    <option value="15">15 Dakika (Hızlı Odaklanma)</option>
+                    <option value="25" selected>25 Dakika (Pomodoro Seansı)</option>
+                    <option value="45">45 Dakika (Derin Çalışma)</option>
+                    <option value="60">60 Dakika (1 Saat)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="action-container">
+            <button class="play-btn" id="playBtn">
+                <span id="playIcon">▶</span> <span id="playText">40 Hz Gama Sesini Başlat</span>
+            </button>
+            <div class="timer-info" id="timerDisplay"></div>
+        </div>
+
+        <div class="info-box">
+            💡 <b>Nasıl Dinlenmeli?</b> <i>Binaural Beats</i> modunu seçtiyseniz mutlaka <b>kulaklık</b> takmalısınız. Sol kulağa taşıyıcı frekans (örneğin 200 Hz), sağ kulağa 240 Hz verilir; beyninizin işitsel korteksi aradaki farkı işleyerek içeride tam <b>40 Hz Gama Ritmi</b> senkronize eder. Hoparlörden dinliyorsanız <i>İzokronik Ton</i> modunu seçebilirsiniz.
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let isPlaying = false;
+
+        // Audio Nodes
+        let oscL = null, oscR = null;
+        let pannerL = null, pannerR = null;
+        let isochronicGain = null, lfoOsc = null;
+        let masterGamaGain = null;
+        
+        // Ambience Nodes
+        let noiseNode = null;
+        let noiseGain = null;
+
+        // Analyser
+        let analyser = null;
+        let animationFrameId = null;
+
+        // Timer
+        let timerCountdown = 0;
+        let timerInterval = null;
+
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const modeSelect = document.getElementById('modeSelect');
+        const carrierSelect = document.getElementById('carrierSelect');
+        const ambienceSelect = document.getElementById('ambienceSelect');
+        const gamaVol = document.getElementById('gamaVol');
+        const gamaVolLabel = document.getElementById('gamaVolLabel');
+        const ambVol = document.getElementById('ambVol');
+        const ambVolLabel = document.getElementById('ambVolLabel');
+        const timerSelect = document.getElementById('timerSelect');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+
+        gamaVol.addEventListener('input', () => {
+            gamaVolLabel.textContent = Math.round(gamaVol.value * 100) + '%';
+            if (masterGamaGain && audioCtx) {
+                masterGamaGain.gain.setValueAtTime(gamaVol.value, audioCtx.currentTime);
+            }
+        });
+
+        ambVol.addEventListener('input', () => {
+            ambVolLabel.textContent = Math.round(ambVol.value * 100) + '%';
+            if (noiseGain && audioCtx) {
+                noiseGain.gain.setValueAtTime(ambVol.value * 0.35, audioCtx.currentTime);
+            }
+        });
+
+        modeSelect.addEventListener('change', () => {
+            if (isPlaying) { restartAudio(); }
+        });
+
+        carrierSelect.addEventListener('change', () => {
+            if (isPlaying) { restartAudio(); }
+        });
+
+        ambienceSelect.addEventListener('change', () => {
+            if (isPlaying) { restartAudio(); }
+        });
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Generate Pink / Brown Noise buffer
+        function createNoiseBuffer(type) {
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            if (type === 'pink') {
+                let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+                    b6 = white * 0.115926;
+                }
+            } else if (type === 'brown' || type === 'rain') {
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    data[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = data[i];
+                    data[i] *= 3.5;
+                }
+            }
+            return buffer;
+        }
+
+        function startAudio() {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const mode = modeSelect.value;
+            const carrier = parseFloat(carrierSelect.value);
+            const delta = 40.0; // Kesin 40 Hz Gama
+
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+
+            masterGamaGain = audioCtx.createGain();
+            masterGamaGain.gain.setValueAtTime(parseFloat(gamaVol.value), audioCtx.currentTime);
+
+            // 1. Gama Modları
+            if (mode === 'binaural') {
+                // Sol kulak: carrier Hz, Sağ kulak: carrier + 40 Hz
+                oscL = audioCtx.createOscillator();
+                oscR = audioCtx.createOscillator();
+                oscL.type = 'sine';
+                oscR.type = 'sine';
+                oscL.frequency.setValueAtTime(carrier, audioCtx.currentTime);
+                oscR.frequency.setValueAtTime(carrier + delta, audioCtx.currentTime);
+
+                pannerL = audioCtx.createStereoPanner();
+                pannerR = audioCtx.createStereoPanner();
+                pannerL.pan.setValueAtTime(-1, audioCtx.currentTime);
+                pannerR.pan.setValueAtTime(1, audioCtx.currentTime);
+
+                oscL.connect(pannerL);
+                oscR.connect(pannerR);
+                pannerL.connect(masterGamaGain);
+                pannerR.connect(masterGamaGain);
+
+                oscL.start();
+                oscR.start();
+            } else if (mode === 'isochronic') {
+                // Taşıyıcı sinüs dalgası + 40 Hz LFO genlik modülasyonu
+                oscL = audioCtx.createOscillator();
+                oscL.type = 'sine';
+                oscL.frequency.setValueAtTime(carrier, audioCtx.currentTime);
+
+                isochronicGain = audioCtx.createGain();
+                isochronicGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                lfoOsc = audioCtx.createOscillator();
+                lfoOsc.type = 'sine';
+                lfoOsc.frequency.setValueAtTime(delta, audioCtx.currentTime); // 40 Hz modülasyon
+
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                lfoOsc.connect(lfoGain);
+                lfoGain.connect(isochronicGain.gain);
+
+                oscL.connect(isochronicGain);
+                isochronicGain.connect(masterGamaGain);
+
+                lfoOsc.start();
+                oscL.start();
+            } else if (mode === 'pure') {
+                // Doğrudan 40 Hz Saf Sub-Bass Tonu
+                oscL = audioCtx.createOscillator();
+                oscL.type = 'sine';
+                oscL.frequency.setValueAtTime(40.0, audioCtx.currentTime);
+                oscL.connect(masterGamaGain);
+                oscL.start();
+            }
+
+            masterGamaGain.connect(analyser);
+            masterGamaGain.connect(audioCtx.destination);
+
+            // 2. Ambiyans Katmanı
+            const amb = ambienceSelect.value;
+            if (amb !== 'none') {
+                const noiseBuffer = createNoiseBuffer(amb);
+                noiseNode = audioCtx.createBufferSource();
+                noiseNode.buffer = noiseBuffer;
+                noiseNode.loop = true;
+
+                noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(parseFloat(ambVol.value) * 0.35, audioCtx.currentTime);
+
+                // Yağmur için hafif filtre
+                if (amb === 'rain') {
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    noiseNode.connect(filter);
+                    filter.connect(noiseGain);
+                } else {
+                    noiseNode.connect(noiseGain);
+                }
+
+                noiseGain.connect(audioCtx.destination);
+                noiseNode.start();
+            }
+
+            // Zamanlayıcı
+            startTimer();
+
+            isPlaying = true;
+            playBtn.classList.add('playing');
+            playIcon.textContent = '⏹';
+            playText.textContent = 'Sesi Durdur';
+
+            drawVisualizer();
+        }
+
+        function stopAudio() {
+            if (oscL) { try { oscL.stop(); } catch(e){} oscL = null; }
+            if (oscR) { try { oscR.stop(); } catch(e){} oscR = null; }
+            if (lfoOsc) { try { lfoOsc.stop(); } catch(e){} lfoOsc = null; }
+            if (noiseNode) { try { noiseNode.stop(); } catch(e){} noiseNode = null; }
+
+            clearInterval(timerInterval);
+            timerDisplay.textContent = '';
+            cancelAnimationFrame(animationFrameId);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            isPlaying = false;
+            playBtn.classList.remove('playing');
+            playIcon.textContent = '▶';
+            playText.textContent = '40 Hz Gama Sesini Başlat';
+        }
+
+        function restartAudio() {
+            stopAudio();
+            setTimeout(startAudio, 100);
+        }
+
+        playBtn.addEventListener('click', () => {
+            if (!isPlaying) {
+                startAudio();
+            } else {
+                stopAudio();
+            }
+        });
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            const minutes = parseInt(timerSelect.value);
+            if (minutes > 0) {
+                timerCountdown = minutes * 60;
+                updateTimerText();
+                timerInterval = setInterval(() => {
+                    timerCountdown--;
+                    if (timerCountdown <= 0) {
+                        stopAudio();
+                        alert("Seans süresi tamamlandı!");
+                    } else {
+                        updateTimerText();
+                    }
+                }, 1000);
+            } else {
+                timerDisplay.textContent = 'Süresiz Çalma Modu Aktif';
+            }
+        }
+
+        function updateTimerText() {
+            const m = Math.floor(timerCountdown / 60);
+            const s = timerCountdown % 60;
+            timerDisplay.textContent = `Kalan Süre: ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function drawVisualizer() {
+            if (!isPlaying || !analyser) return;
+
+            animationFrameId = requestAnimationFrame(drawVisualizer);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
+
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = 130;
+
+            ctx.fillStyle = '#090d13';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#58a6ff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(88, 166, 255, 0.6)';
+
+            ctx.beginPath();
+            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+    </script>
+</body>
+</html>
